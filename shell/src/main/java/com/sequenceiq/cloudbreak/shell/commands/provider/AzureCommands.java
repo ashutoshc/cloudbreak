@@ -407,7 +407,6 @@ public class AzureCommands implements CommandMarker {
             String persistentStorage,
             @CliOption(key = "customImage", help = "select customImage for cluster") String customImage,
             @CliOption(key = "wait", help = "Wait for stack creation", unspecifiedDefaultValue = "false", specifiedDefaultValue = "true") boolean wait,
-            @CliOption(key = "timeout", help = "Wait timeout if wait=true", mandatory = false) Long timeout,
             @CliOption(key = "customDomain", help = "Custom domain for the nodes in the stack", mandatory = false) String customDomain,
             @CliOption(key = "customHostname", help = "Custom hostname for the nodes in the stack", mandatory = false) String customHostname,
             @CliOption(key = "clusterNameAsSubdomain", help = "Using the cluster name for subdomain", unspecifiedDefaultValue = "false",
@@ -420,6 +419,8 @@ public class AzureCommands implements CommandMarker {
             @CliOption(key = "vaultSecretName", help = "select name of your vault secret") String vaultSecretName,
             @CliOption(key = "vaultResourceGroupName", help = "select resourcegroup of your vault") String vaultResourceGroupName,
             @CliOption(key = "vaultSecretVersion", help = "select version of your vault secret") String vaultSecretVersion,
+            @CliOption(key = "encryptStorage", help = "Encrypt Azure storage", unspecifiedDefaultValue = "false",
+                    specifiedDefaultValue = "false", mandatory = false) boolean encryptStorage,
             @CliOption(key = "timeout", help = "Wait timeout if wait=true", mandatory = false) Long timeout) {
 
             orchestratorType = (orchestratorType == null) ? new ArmOrchestratorType(SALT) : orchestratorType;
