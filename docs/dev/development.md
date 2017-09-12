@@ -1,70 +1,90 @@
 # Local Development Setup
-To use this development environment on OSX, you need to have Docker and Boot2docker installed.
+To use this development environment on OSX, you need to have Java, Docker and VirtualBox installed (Boot2docker is optional).
 
 ## Cloudbreak Deployer
 
-Simplest way to prepare the working environment is to start the Cloudbreak on your local machine is to use the [Cloudbreak Deployer](https://github.com/sequenceiq/cloudbreak-deployer).
+Simplest way to prepare the working environment is to start Cloudbreak on your local machine is to use the [Cloudbreak Deployer](https://github.com/hortonworks/cloudbreak-deployer).
 
-First you need to create a _sandbox_ directory which will store the necessary  configuration files and dependencies of [Cloudbreak Deployer](https://github.com/sequenceiq/cloudbreak-deployer). This directory must be created outside of the cloned Cloudbreak git repository:
+First you need to create a _sandbox_ directory which will store the necessary configuration files and dependencies of [Cloudbreak Deployer](https://github.com/hortonworks/cloudbreak-deployer). This directory must be created outside of the cloned Cloudbreak git repository:
 ```
 mkdir cbd-local
+cd cbd-local
 ```
+
+Add the following to the file `Profile` there under cbd-local (IPs could be different based on your network/virtualbox setup):
+```
+export PUBLIC_IP=192.168.99.100
+export PRIVATE_IP=192.168.99.100
+export CB_LOCAL_DEV_BIND_ADDR=192.168.99.1
+export DOCKER_MACHINE=default
+export ULU_SUBSCRIBE_TO_NOTIFICATIONS=true
+export CB_INSTANCE_UUID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+export CB_SCHEMA_SCRIPTS_LOCATION=/Users/YOUR_USERNAME/YOUR_PROJECT_DIR/cloudbreak/core/src/main/resources/schema
+export UAA_DEFAULT_USER_PW=YOUR_PASSWORD
+```
+
+The CB_SCHEMA_SCRIPTS_LOCATION environment variable configures the location of SQL scripts that are in the 'core/src/main/resources/schema' directory in the cloned Cloudbreak git repository. Please note that the full path needs to be configured and env variables like $USER cannot be used. You also have to set a password for your local Cloudbreak in UAA_DEFAULT_USER_PW.
 
 To start the complete Cloudbreak ecosystem on your machine just execute the following sequence of commands:
 ```
-cd cbd-local
-curl https://raw.githubusercontent.com/sequenceiq/cloudbreak-deployer/master/install | sh && cbd --version
-cbd update master
-cbd init
+curl https://raw.githubusercontent.com/hortonworks/cloudbreak-deployer/master/install-dev | sh [-s branch] && cbd --version
+```
+Use the -s branch option for sh here in case you'd like to checkout another branch than master.
+
+```
+docker-machine start default
+eval $(docker-machine env)
+
 cbd start
+cbd logs cloudbreak
 ```
-If everything went well then the Cloudbreak will be available on http://192.168.59.103:3000. For more details and config parameters please check the documentation of [Cloudbreak Deployer](https://github.com/sequenceiq/cloudbreak-deployer).
+If everything went well then Cloudbreak will be available on http://192.168.99.100:3000. For more details and config parameters please check the documentation of [Cloudbreak Deployer](https://github.com/hortonworks/cloudbreak-deployer).
 
-The deployer has generated a `certs` directory under `cbd-local` directory which will be needed later on to set up the IDEA properly.
+The deployer has generated a `certs` directory under `cbd-local` directory which will be needed later on to set up IDEA properly.
 
-The next step is to edit the `cbd-local/Profile` file with any editor and add the CB_SCHEMA_SCRIPTS_LOCATION environment variable which configures the location of SQL scripts that are in the 'core/src/main/resources/schema' directory in the cloned Cloudbreak git repository. Please note that the full path needs to be configured and env variables like $USER cannot be used.
-
-```
-export CB_SCHEMA_SCRIPTS_LOCATION=/Users/myusername/prj/cloudbreak/core/src/main/resources/schema
-```
-
-In order to kill Cloudbreak container running inside the boot2docker and redirect the Cloudbreak related traffic to the Cloudbreak running in IDEA use the followig command:
 
 ```
 cbd util local-dev
 ```
 
+In order to kill Cloudbreak container running in docker/boot2docker and redirect the Cloudbreak related traffic to the Cloudbreak running in IDEA use the followig command:
+
 ## IDEA
 
-Cloudbreak can be imported into IDEA as gradle project. Once it is done, you need to import the proper code formatter by using the __File -> Import Settings...__ menu and selecting the `idea_settings.jar` located in the `config` directory in Cloudbreak git repository.
+Configure -> Project Defaults -> Project Structure _> Set SDK to your Java version
+
+Cloudbreak can be imported into IDEA as gradle project. Once it is done, you need to import the proper code formatter by using the __File -> Import Settings...__ menu and selecting the `idea_settings.jar` located in the `config/idea` directory in Cloudbreak git repository.
 
 To launch the Cloudbreak application execute the `com.sequenceiq.cloudbreak.CloudbreakApplication` class with VM options:
 ```
 -XX:MaxPermSize=1024m
 -Dcb.cert.dir=FULL_PATH_OF_THE_CERTS_DIR_GENERATED_BY_CBD
 -Dcb.client.id=cloudbreak
--Dcb.client.secret=cbsecret2015
--Dcb.db.port.5432.tcp.addr=192.168.59.103
+-Dcb.client.secret=CB_SECRET_GENERATED_BY_CBD
+-Dcb.db.port.5432.tcp.addr=192.168.99.100
 -Dcb.db.port.5432.tcp.port=5432
--Dcb.identity.server.url=http://192.168.59.103:8089
+-Dcb.identity.server.url=http://192.168.99.100:8089
 -Dserver.port=9091
 -Dcb.schema.migration.auto=true
 ```
 
-The `-Dcb.cert.dir=FULL_PATH_OF_THE_CERTS_DIR_GENERATED_BY_CBD` value above needs to be replaced with the full path of `certs` directory generated by Cloudbreak Deployer e.g. `-Dcb.cert.dir=/Users/myusername/prj/cbd-local/certs`.
+The `-Dcb.cert.dir=FULL_PATH_OF_THE_CERTS_DIR_GENERATED_BY_CBD` value above needs to be replaced with the full path of `certs` directory generated by Cloudbreak Deployer e.g. `/Users/YOUR_USERNAME/YOUR_PROJECT_DIR/cbd-local`.
+
+The `-Dcb.client.secret=CB_SECRET_GENERATED_BY_CBD` value has to be replaced with the value of UAA_DEFAULT_SECRET from the cdb-local/Profile file.
 The databse migration is ran automatically by Cloudbreak, this automated migration could be turn off through the `-Dcb.schema.migration.auto=false` VM option.
 
 ## Command line
 
-To run Cloudbreak from command line you have to create a property file, for example application.properties, with the content below, and execute `./gradlew bootRun -Dspring.config.location=file:/path/of/property/application.properties` command at project root.
+To run Cloudbreak from command line you have to list the JVM parameters from above for gradle:
+
 ```
--Dcb.cert.dir=FULL_PATH_OF_THE_CERTS_DIR_GENERATED_BY_CBD
--Dcb.client.id=cloudbreak
--Dcb.client.secret=cbsecret2015
--Dcb.db.port.5432.tcp.addr=192.168.59.103
--Dcb.db.port.5432.tcp.port=5432
--Dcb.identity.server.url=http://192.168.59.103:8089
--Dserver.port=9091
+./gradlew :core:bootRun -PjvmArgs="-Dcb.cert.dir=FULL_PATH_OF_THE_CERTS_DIR_GENERATED_BY_CBD \
+-Dcb.client.id=cloudbreak \
+-Dcb.client.secret=CB_SECRET_GENERATED_BY_CBD \
+-Dcb.db.port.5432.tcp.addr=192.168.99.100 \
+-Dcb.db.port.5432.tcp.port=5432 \
+-Dcb.identity.server.url=http://192.168.99.100:8089 \
+-Dserver.port=9091"
 ```
 
 ## Database development
